@@ -1,5 +1,7 @@
-﻿using citi_core.Interfaces;
+﻿using citi_core.Dto;
+using citi_core.Interfaces;
 using citi_core.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace citi_core.Controllers
@@ -17,10 +19,11 @@ namespace citi_core.Controllers
             _logger = logger;
         }
 
+        [AllowAnonymous]
         [HttpPost("add-user")]
-        public async Task<IActionResult> CreateUser([FromBody] User user)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
         {
-            var result = await _userService.AddUserAsync(user);
+            var result = await _userService.AddUserAsync(dto);
 
             if (!result.IsSuccess)
             {

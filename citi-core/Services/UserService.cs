@@ -1,10 +1,8 @@
-﻿using BCrypt.Net;
-using citi_core.Common;
-using citi_core.Common.citi_core.Common;
+﻿using citi_core.Common.citi_core.Common;
+using citi_core.Dto;
 using citi_core.Interfaces;
 using citi_core.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace citi_core.Services
 {
@@ -19,7 +17,7 @@ namespace citi_core.Services
             _logger = logger;
         }
 
-        public async Task<Result<User>> AddUserAsync(User user)
+        public async Task<Result<User>> AddUserAsync(CreateUserDto dto)
         {
             var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
 
@@ -27,43 +25,31 @@ namespace citi_core.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                try
+                var existingEmail = await _unitOfWork.Users.GetByEmailAsync(dto.Email);
+                if (existingEmail != null)
+                    return Result<User>.Failure("Email already exists.");
+
+                if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                 {
-                    if (string.IsNullOrWhiteSpace(user.Email))
-                        return Result<User>.Failure("Email is required.");
-
-                    if (string.IsNullOrWhiteSpace(user.FullName))
-                        return Result<User>.Failure("Full name is required.");
-
-                    if (string.IsNullOrWhiteSpace(user.PasswordHash))
-                        return Result<User>.Failure("Password is required.");
-
-                    var existingUserByEmail = await _unitOfWork.Users.GetByEmailAsync(user.Email);
-                    if (existingUserByEmail != null)
-                        return Result<User>.Failure("Email already exists.");
-
-                    if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
-                    {
-                        var existingUserByPhone = await _unitOfWork.Users.GetByPhoneAsync(user.PhoneNumber);
-                        if (existingUserByPhone != null)
-                            return Result<User>.Failure("Phone number already exists.");
-                    }
-
-                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash, workFactor: 12);
-
-                    await _unitOfWork.Users.AddUserAsync(user);
-                    await _unitOfWork.SaveChangesAsync();
-
-                    await _unitOfWork.CommitTransactionAsync();
-
-                    return Result<User>.Success(user);
+                    var existingPhone = await _unitOfWork.Users.GetByPhoneAsync(dto.PhoneNumber);
+                    if (existingPhone != null)
+                        return Result<User>.Failure("Phone number already exists.");
                 }
-                catch (Exception ex)
+
+                var user = new User
                 {
-                    await _unitOfWork.RollbackTransactionAsync();
-                    _logger.LogError(ex, "Failed to add user. Email={Email}", user.Email);
-                    return Result<User>.Failure("Failed to add user.");
-                }
+                    Email = dto.Email,
+                    FullName = dto.FullName,
+                    PhoneNumber = dto.PhoneNumber,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password, 12),
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Users.AddUserAsync(user);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return Result<User>.Success(user);
             });
         }
     }

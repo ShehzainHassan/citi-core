@@ -1,6 +1,7 @@
 using citi_core.Data;
 using citi_core.Interfaces;
 using citi_core.Services;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,8 +17,8 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -28,9 +29,19 @@ builder.Services.AddScoped<IUserRepository, DbUserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 // Register Unit of Work
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();  
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Register Health Checks
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database_health");
+
+// Enable automatic FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
 
 var app = builder.Build();
+
+app.MapHealthChecks("/health");
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 await DbInitializer.InitializeAsync(app.Services, app.Environment);
 
