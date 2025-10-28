@@ -1,5 +1,6 @@
 ﻿using citi_core.Enums;
 using System;
+using System.Text.Json.Serialization;
 
 namespace citi_core.Models
 {
@@ -11,6 +12,7 @@ namespace citi_core.Models
         public string Currency { get; set; } = "USD";
         public bool NotificationsEnabled { get; set; }
         public Theme Theme { get; set; } = Theme.Light;
+        [JsonIgnore]
         public User User { get; set; } = null!;
     }
 }

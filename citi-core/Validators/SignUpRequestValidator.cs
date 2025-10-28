@@ -1,18 +1,22 @@
 ﻿using citi_core.Dto;
 using FluentValidation;
 
-public class CreateUserValidator : AbstractValidator<CreateUserDto>
+public class SignUpRequestValidator : AbstractValidator<SignUpRequest>
 {
-    public CreateUserValidator()
+    public SignUpRequestValidator()
     {
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Full Name is required.")
-            .MaximumLength(100).WithMessage("Full Name cannot exceed 100 characters.");
+            .Length(2, 100).WithMessage("Full Name must be between 2 and 100 characters.");
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("Invalid email format.")
             .MaximumLength(150).WithMessage("Email cannot exceed 150 characters.");
+
+        RuleFor(x => x.PhoneNumber)
+            .NotEmpty().WithMessage("Phone Number is required.")
+            .Matches(@"^\+[1-9]\d{9,14}$").WithMessage("Phone number must be in valid E.164 format.");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")
@@ -22,9 +26,7 @@ public class CreateUserValidator : AbstractValidator<CreateUserDto>
             .Matches("[0-9]").WithMessage("Password must contain at least one number.")
             .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain at least one special character.");
 
-        RuleFor(x => x.PhoneNumber)
-            .NotEmpty().When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber))
-            .Matches(@"^\+?[0-9]{10,15}$")
-            .WithMessage("Phone number must be a valid international number and between 10 to 15 digits.");
+        RuleFor(x => x.AcceptTerms)
+            .Equal(true).WithMessage("You must accept terms and conditions.");
     }
 }
