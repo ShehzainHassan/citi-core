@@ -10,5 +10,6 @@ namespace citi_core.Data
         Task<RefreshToken?> GetRefreshTokenAsync(string token);
         Task<User?> GetUserByRefreshTokenAsync(string token);
         Task RevokeRefreshTokenAsync(RefreshToken refreshToken, string ipAddress, string? replacementToken = null);
+        Task<List<RefreshToken>> GetAllActiveRefreshTokensAsync(Guid userId);
     }
 }

@@ -5,6 +5,7 @@ namespace citi_core.Interfaces
 {
     public interface IAuthRepository
     {
+        Task<User?> GetByIdAsync(Guid userId);
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetByPhoneAsync(string phoneNumber);
         Task AddUserAsync(User user);

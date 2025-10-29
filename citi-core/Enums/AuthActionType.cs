@@ -5,8 +5,12 @@
         LoginSuccess,
         LoginFailed,
         Logout,
+        PasswordReset,
         PasswordChange,
         TokenRefresh,
         AccountLocked,
+        OTPVerification,
+        BiometricEnabled,
+        BiometricDisabled
     }
 }

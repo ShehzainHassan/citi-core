@@ -4,6 +4,7 @@ using citi_core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace citi_core.Controllers
@@ -77,6 +78,121 @@ namespace citi_core.Controllers
             if (!result.IsSuccess) return BadRequest(new { message = result.ErrorMessage });
 
             return Ok(result.Value);
+        }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            _logger.LogInformation("ForgotPassword API Hit!");
+
+            var result = await _authService.ForgotPasswordAsync(request);
+            if (!result.IsSuccess) return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("verify-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyOTP([FromBody] VerifyOTPRequest request)
+        {
+            _logger.LogInformation("VerifyOTP API Hit!");
+
+            var result = await _authService.VerifyOTPAsync(request);
+            if (!result.IsSuccess) return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { verificationToken = result.Value });
+        }
+
+        [HttpPost("resend-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResendOTP([FromBody] ResendOTPRequest request)
+        {
+            _logger.LogInformation("ResendOTP API Hit!");
+
+            var result = await _authService.ResendOTPAsync(request);
+            if (!result.IsSuccess) return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            _logger.LogInformation("ResetPassword API Hit!");
+
+            var result = await _authService.ResetPasswordAsync(request);
+            if (!result.IsSuccess) return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            _logger.LogInformation("ChangePassword API Hit!");
+
+            var userIdClaim = User.FindFirst("sub")
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirst("userId");
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            var userId = Guid.Parse(userIdClaim.Value);
+
+            var result = await _authService.ChangePasswordAsync(userId, request);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
+        }
+
+        [Authorize]
+        [HttpPost("enable-biometric")]
+        public async Task<IActionResult> EnableBiometric()
+        {
+            _logger.LogInformation("EnableBiometric API Hit!");
+
+            var userIdClaim = User.FindFirst("sub")
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirst("userId");
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            var userId = Guid.Parse(userIdClaim.Value);
+
+            var result = await _authService.SetBiometricEnabledAsync(userId, true);
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
+        }
+
+        [Authorize]
+        [HttpPost("disable-biometric")]
+        public async Task<IActionResult> DisableBiometric()
+        {
+            _logger.LogInformation("DisableBiometric API Hit!");
+
+            var userIdClaim = User.FindFirst("sub")
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirst("userId");
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            var userId = Guid.Parse(userIdClaim.Value);
+
+            var result = await _authService.SetBiometricEnabledAsync(userId, false);
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.ErrorMessage });
+
+            return Ok(new { success = true });
         }
     }
 }

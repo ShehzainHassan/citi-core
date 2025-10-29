@@ -48,5 +48,12 @@ namespace citi_core.Data
             _dbContext.RefreshTokens.Update(refreshToken);
             return Task.CompletedTask;
         }
+
+        public async Task<List<RefreshToken>> GetAllActiveRefreshTokensAsync(Guid userId)
+        {
+            return await _dbContext.RefreshTokens
+                .Where(rt => rt.UserId == userId && !rt.IsRevoked && rt.ExpiresAt > DateTime.UtcNow)
+                .ToListAsync();
+        }
     }
 }

@@ -115,7 +115,7 @@ namespace citi_core.Data
             modelBuilder.Entity<OTPVerification>(entity =>
             {
                 entity.HasKey(o => o.OTPVerificationId);
-                entity.Property(o => o.Code).IsRequired().HasMaxLength(6);
+                entity.Property(o => o.Code).IsRequired().HasMaxLength(64);
                 entity.Property(o => o.Purpose).IsRequired();
                 entity.Property(o => o.ExpiresAt).IsRequired();
                 entity.Property(o => o.IsUsed).HasDefaultValue(false);
@@ -125,7 +125,6 @@ namespace citi_core.Data
             modelBuilder.Entity<AuthAuditLog>(entity =>
             {
                 entity.HasKey(a => a.AuthAuditLogId);
-
                 entity.Property(a => a.Email).HasMaxLength(100);
                 entity.Property(a => a.ActionType).IsRequired();
                 entity.Property(a => a.IpAddress).HasMaxLength(50);
@@ -147,7 +146,7 @@ namespace citi_core.Data
 
             // Indexes
             modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
-            modelBuilder.Entity<User>().HasIndex(u => u.PhoneNumber).IsUnique();
+            //modelBuilder.Entity<User>().HasIndex(u => u.PhoneNumber).IsUnique();
 
             modelBuilder.Entity<Account>().HasIndex(a => a.AccountNumber).IsUnique();
             modelBuilder.Entity<Account>().HasIndex(a => a.UserId);

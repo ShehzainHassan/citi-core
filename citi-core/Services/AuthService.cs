@@ -6,7 +6,9 @@ using citi_core.Interfaces;
 using citi_core.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace citi_core.Services
@@ -17,14 +19,16 @@ namespace citi_core.Services
         private readonly IOTPService _otpService;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEmailService _emailService;
+        private readonly ILogger<AuthService> _logger;
         private const int LockoutThreshold = 5;
         private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(30);
-        public AuthService(IUnitOfWork unitOfWork, IOTPService otpService, IJwtTokenService jwtTokenService, IEmailService emailService)
+        public AuthService(IUnitOfWork unitOfWork, IOTPService otpService, IJwtTokenService jwtTokenService, IEmailService emailService, ILogger<AuthService> logger)
         {
             _unitOfWork = unitOfWork;
             _otpService = otpService;
             _jwtTokenService = jwtTokenService;
             _emailService = emailService;
+            _logger = logger;
         }
         public async Task<Result<AuthResponse>> SignUpAsync(SignUpRequest signUpRequest, IPAddress ipAddress, string userAgent)
         {
@@ -81,10 +85,10 @@ namespace citi_core.Services
                     await _unitOfWork.DbContext.Users.AddAsync(user);
                     await _unitOfWork.SaveChangesAsync();
 
-                    await _otpService.GenerateOTPAsync(
-                        email: signUpRequest.Email,
-                        phoneNumber: string.IsNullOrWhiteSpace(signUpRequest.PhoneNumber) ? null : signUpRequest.PhoneNumber,
-                        purpose: OTPPurpose.Registration);
+                    //await _otpService.GenerateOTPAsync(
+                    //    email: signUpRequest.Email,
+                    //    phoneNumber: string.IsNullOrWhiteSpace(signUpRequest.PhoneNumber) ? null : signUpRequest.PhoneNumber,
+                    //    purpose: OTPPurpose.Registration);
 
                     var accessToken = _jwtTokenService.GenerateAccessToken(user);
                     var refreshToken = _jwtTokenService.GenerateRefreshToken();
@@ -384,6 +388,240 @@ namespace citi_core.Services
                     Console.WriteLine(ex);
                     await _unitOfWork.RollbackTransactionAsync();
                     return Result<bool>.Failure("An error occurred during sign-out.");
+                }
+            });
+        }
+        public async Task<Result<bool>> ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    var user = await _unitOfWork.AuthRepository.GetByEmailAsync(request.Email);
+                    if (user == null || user.IsDeleted)
+                        return Result<bool>.Failure("Account not found.");
+
+                    var otp = await _otpService.GenerateOTPAsync(request.Email, request.PhoneNumber, OTPPurpose.PasswordReset);
+                    await _otpService.SendOTPAsync(request.Email, request.PhoneNumber, otp);
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Result<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError(ex, "Error during forgot password OTP generation");
+                    return Result<bool>.Failure("An error occurred while processing the request.");
+                }
+            });
+        }
+        public async Task<Result<string>> VerifyOTPAsync(VerifyOTPRequest request)
+        {
+            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    var user = await _unitOfWork.AuthRepository.GetByEmailAsync(request.Email);
+                    if (user == null || user.IsDeleted)
+                        return Result<string>.Failure("Account not found.");
+
+                    var isValid = await _otpService.VerifyOTPAsync(
+                        request.Email,
+                        request.PhoneNumber,
+                        request.Code.ToString(),
+                        request.Purpose
+                    );
+
+                    if (!isValid)
+                        return Result<string>.Failure("Invalid or expired OTP.");
+
+                    await _otpService.InvalidateOTPAsync(request.Email, null, request.Purpose);
+
+                    var verificationToken = _jwtTokenService.GenerateVerificationToken(user);
+
+                    await _unitOfWork.AuthRepository.AddAuthLogAsync(new AuthAuditLog
+                    {
+                        UserId = user.UserId,
+                        Email = user.Email,
+                        ActionType = AuthActionType.OTPVerification,
+                        ActionDate = DateTime.UtcNow
+                    });
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Result<string>.Success(verificationToken);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError(ex, "Error during OTP verification");
+                    return Result<string>.Failure("An error occurred during OTP verification.");
+                }
+            });
+        }
+        public async Task<Result<bool>> ResendOTPAsync(ResendOTPRequest request)
+        {
+            var user = await _unitOfWork.AuthRepository.GetByEmailAsync(request.Email);
+            if (user == null || user.IsDeleted)
+                return Result<bool>.Failure("Account not found.");
+
+            await _otpService.InvalidateOTPAsync(request.Email, request.PhoneNumber, request.Purpose);
+            var otp = await _otpService.GenerateOTPAsync(request.Email, request.PhoneNumber, request.Purpose);
+            await _otpService.SendOTPAsync(request.Email, request.PhoneNumber, otp);
+
+            return Result<bool>.Success(true);
+        }
+        public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    var user = await _unitOfWork.AuthRepository.GetByEmailAsync(request.Email);
+                    if (user == null)
+                        return Result<bool>.Failure("Account not found");
+
+                    var principal = _jwtTokenService.ValidateVerificationToken(request.VerificationToken);
+
+                    if (principal == null)
+                        return Result<bool>.Failure("Invalid or expired verification token");
+
+                    foreach (var claim in principal.Claims)
+                    {
+                        _logger.LogInformation("JWT Claim: {Type} = {Value}", claim.Type, claim.Value);
+                    }
+
+                    var tokenEmail =
+                        principal.FindFirst(JwtRegisteredClaimNames.Email)?.Value ??
+                        principal.FindFirst(ClaimTypes.Email)?.Value;
+                    if (tokenEmail != request.Email)
+                        return Result<bool>.Failure("Verification token does not match email.");
+
+                    user.SecuritySettings ??= new UserSecuritySettings();
+                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                    user.SecuritySettings.LastPasswordChangeAt = DateTime.UtcNow;
+
+                    await _jwtTokenService.InvalidateAllRefreshTokensAsync(user.UserId);
+                    await _otpService.InvalidateOTPAsync(request.Email, user.PhoneNumber, OTPPurpose.PasswordReset);
+
+                    await _unitOfWork.AuthRepository.AddAuthLogAsync(new AuthAuditLog
+                    {
+                        UserId = user.UserId,
+                        Email = user.Email,
+                        ActionType = AuthActionType.PasswordReset,
+                        ActionDate = DateTime.UtcNow
+                    });
+
+                    _unitOfWork.AuthRepository.UpdateUser(user);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Result<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError(ex, "Error during password reset");
+                    return Result<bool>.Failure("An error occurred while resetting the password.");
+                }
+            });
+        }
+        public async Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+        {
+            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    var user = await _unitOfWork.AuthRepository.GetByIdAsync(userId);
+                    if (user == null || user.IsDeleted)
+                        return Result<bool>.Failure("User not found.");
+
+                    if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                        return Result<bool>.Failure("Current password is incorrect.");
+
+                    if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+                        return Result<bool>.Failure("New password must be different from current password.");
+
+                    user.SecuritySettings ??= new UserSecuritySettings();
+                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                    user.SecuritySettings.LastPasswordChangeAt = DateTime.UtcNow;
+
+                    await _jwtTokenService.InvalidateAllRefreshTokensAsync(userId);
+
+                    await _unitOfWork.AuthRepository.AddAuthLogAsync(new AuthAuditLog
+                    {
+                        UserId = user.UserId,
+                        Email = user.Email,
+                        ActionType = AuthActionType.PasswordChange,
+                        ActionDate = DateTime.UtcNow
+                    });
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Result<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError(ex, "Error during password change");
+                    return Result<bool>.Failure("An error occurred while changing the password.");
+                }
+            });
+        }
+        public async Task<Result<bool>> SetBiometricEnabledAsync(Guid userId, bool enabled)
+        {
+            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    var user = await _unitOfWork.AuthRepository.GetByIdAsync(userId);
+                    if (user == null || user.IsDeleted)
+                        return Result<bool>.Failure("User not found.");
+
+                    user.BiometricEnabled = enabled;
+
+                    await _unitOfWork.AuthRepository.AddAuthLogAsync(new AuthAuditLog
+                    {
+                        UserId = user.UserId,
+                        Email = user.Email,
+                        ActionType = enabled ? AuthActionType.BiometricEnabled : AuthActionType.BiometricDisabled,
+                        ActionDate = DateTime.UtcNow
+                    });
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Result<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError(ex, "Error updating biometric status");
+                    return Result<bool>.Failure("An error occurred while updating biometric status.");
                 }
             });
         }

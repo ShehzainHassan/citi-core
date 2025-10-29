@@ -9,6 +9,7 @@ namespace citi_core.Data
         private IDbContextTransaction? _transaction;
         public ApplicationDbContext DbContext => _context;
         public IAuthRepository AuthRepository { get; }
+        
         public UnitOfWork(ApplicationDbContext context, IAuthRepository authRepository)
         {
             _context = context;

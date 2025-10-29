@@ -15,8 +15,9 @@ public class SignUpRequestValidator : AbstractValidator<SignUpRequest>
             .MaximumLength(150).WithMessage("Email cannot exceed 150 characters.");
 
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty().WithMessage("Phone Number is required.")
-            .Matches(@"^\+[1-9]\d{9,14}$").WithMessage("Phone number must be in valid E.164 format.");
+            .Matches(@"^\+[1-9]\d{9,14}$")
+            .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber))
+            .WithMessage("Phone number must be in valid E.164 format.");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")

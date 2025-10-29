@@ -16,14 +16,12 @@ namespace citi_core.Models
         [EmailAddress] 
         public string? Email { get; set; }
 
-        [Required]
         [MaxLength(20)]
         [Phone]
         public string? PhoneNumber { get; set; }
 
         [Required]
-        [MaxLength(6)]
-        [MinLength(4)]
+        [MaxLength(64)]
         public string Code { get; set; } = string.Empty;
 
         [Required]

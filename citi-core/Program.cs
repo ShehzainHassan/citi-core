@@ -1,12 +1,14 @@
 using citi_core.Data;
 using citi_core.Interfaces;
 using citi_core.Services;
+using citi_core.Validators;
+using FluentValidation;
 using FluentValidation.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,6 +96,12 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database_healt
 
 // Enable automatic FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<RefreshTokenRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<SignInRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<SignUpRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<VerifyOTPRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<ResetPasswordRequestValidator>();
 
 var app = builder.Build();
 

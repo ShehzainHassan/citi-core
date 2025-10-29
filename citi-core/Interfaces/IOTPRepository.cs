@@ -25,5 +25,10 @@ namespace citi_core.Data
         /// Invalidates all unused OTPs for the given email/phone and purpose.
         /// </summary>
         Task InvalidateOTPsAsync(string email, string? phoneNumber, OTPPurpose purpose);
+
+        /// <summary>
+        /// Count OTP Request in a time span
+        /// </summary>
+        Task<int> CountRecentOTPsAsync(string email, string? phoneNumber, OTPPurpose purpose, TimeSpan window);
     }
 }

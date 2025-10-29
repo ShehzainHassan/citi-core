@@ -29,7 +29,16 @@ namespace citi_core.Data
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
         }
-
+        public async Task<int> CountRecentOTPsAsync(string email, string? phoneNumber, OTPPurpose purpose, TimeSpan window)
+        {
+            var cutoff = DateTime.UtcNow.Subtract(window);
+            return await _dbContext.OTPVerifications
+                .Where(o => o.Email == email
+                    && o.PhoneNumber == phoneNumber
+                    && o.Purpose == purpose
+                    && o.CreatedAt >= cutoff)
+                .CountAsync();
+        }
         public Task UpdateOTPAsync(OTPVerification otp)
         {
             _dbContext.OTPVerifications.Update(otp);

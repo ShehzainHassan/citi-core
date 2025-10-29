@@ -13,6 +13,12 @@ namespace citi_core.Data
         {
             _dbContext = dbContext;
         }
+        public async Task<User?> GetByIdAsync(Guid userId)
+        {
+            return await _dbContext.Users
+                .Include(u => u.SecuritySettings)
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+        }
         public async Task<User?> GetByEmailAsync(string email)
         {
             return await _dbContext.Users
