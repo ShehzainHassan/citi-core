@@ -13,8 +13,6 @@ namespace citi_core.Dto
         public bool BiometricEnabled { get; set; }
         public bool TwoFactorEnabled { get; set; }
         public DateTime? LastLoginAt { get; set; }
-
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public UserPreferences? Preferences { get; set; }
+        public UserPreferencesDto Preferences { get; set; } = new UserPreferencesDto();
     }
 }

@@ -194,5 +194,46 @@ namespace citi_core.Controllers
 
             return Ok(new { success = true });
         }
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            _logger.LogInformation("GetProfile API Hit!");
+
+            var userIdClaim = User.FindFirst("sub")
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirst("userId");
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            var userId = Guid.Parse(userIdClaim.Value); 
+            var profile = await _authService.GetProfileAsync(userId);
+            return Ok(profile);
+        }
+
+        [Authorize]
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileRequest request)
+        {
+            _logger.LogInformation("UpdateProfile API Hit!");
+
+            var userIdClaim = User.FindFirst("sub")
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirst("userId");
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "User ID not found in token" });
+
+            var userId = Guid.Parse(userIdClaim.Value);
+            var result = await _authService.UpdateProfileAsync(userId, request);
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.ErrorMessage });
+
+            var updatedProfile = await _authService.GetProfileAsync(userId);
+            return Ok(updatedProfile);
+        }
+
     }
 }

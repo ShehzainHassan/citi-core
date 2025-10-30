@@ -11,5 +11,6 @@ namespace citi_core.Interfaces
         Task AddUserAsync(User user);
         Task AddAuthLogAsync(AuthAuditLog authLog);
         void UpdateUser(User user);
+        Task<User?> GetUserWithPreferencesAsync(Guid userId);
     }
 }

@@ -42,5 +42,12 @@ namespace citi_core.Data
         {
             _dbContext.Users.Update(user);
         }
+        public async Task<User?> GetUserWithPreferencesAsync(Guid userId)
+        {
+            return await _dbContext.Users
+                .Include(u => u.UserPreferences)
+                .Include(u => u.SecuritySettings)
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+        }
     }
 }

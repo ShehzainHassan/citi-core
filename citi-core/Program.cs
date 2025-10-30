@@ -72,6 +72,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -102,6 +103,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<SignInRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<SignUpRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<VerifyOTPRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<ResetPasswordRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserProfileRequestValidator>();
 
 var app = builder.Build();
 

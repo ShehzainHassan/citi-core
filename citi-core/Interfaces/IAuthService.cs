@@ -23,6 +23,7 @@ namespace citi_core.Interfaces
         Task<Result<bool>> SetBiometricEnabledAsync(Guid userId, bool enabled);
         Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request);
         Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
-
+        Task<Result<UserProfileDTO>> GetProfileAsync(Guid userId);
+        Task<Result<bool>> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request);
     }
 }

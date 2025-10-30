@@ -123,7 +123,13 @@ namespace citi_core.Services
                             BiometricEnabled = user.BiometricEnabled,
                             TwoFactorEnabled = user.SecuritySettings?.TwoFactorEnabled ?? false,
                             LastLoginAt = user.LastLoginAt,
-                            Preferences = user.UserPreferences
+                            Preferences = new UserPreferencesDto
+                            {
+                                Language = user.UserPreferences?.Language ?? "en",
+                                Currency = user.UserPreferences?.Currency ?? "USD",
+                                Theme = user.UserPreferences?.Theme ?? Theme.Light,
+                                NotificationsEnabled = user.UserPreferences?.NotificationsEnabled ?? true
+                            }
                         }
                     };
 
@@ -245,7 +251,13 @@ namespace citi_core.Services
                             BiometricEnabled = user.BiometricEnabled,
                             TwoFactorEnabled = user.SecuritySettings?.TwoFactorEnabled ?? false,
                             LastLoginAt = user.LastLoginAt,
-                            Preferences = user.UserPreferences
+                            Preferences = new UserPreferencesDto
+                            {
+                                Language = user.UserPreferences?.Language ?? "en",
+                                Currency = user.UserPreferences?.Currency ?? "USD",
+                                Theme = user.UserPreferences?.Theme ?? Theme.Light,
+                                NotificationsEnabled = user.UserPreferences?.NotificationsEnabled ?? true
+                            }
                         }
                     };
 
@@ -313,7 +325,13 @@ namespace citi_core.Services
                     BiometricEnabled = user.BiometricEnabled,
                     TwoFactorEnabled = user.SecuritySettings?.TwoFactorEnabled ?? false,
                     LastLoginAt = user.LastLoginAt,
-                    Preferences = user.UserPreferences
+                    Preferences = new UserPreferencesDto
+                    {
+                        Language = user.UserPreferences?.Language ?? "en",
+                        Currency = user.UserPreferences?.Currency ?? "USD",
+                        Theme = user.UserPreferences?.Theme ?? Theme.Light,
+                        NotificationsEnabled = user.UserPreferences?.NotificationsEnabled ?? true
+                    }
                 }
             };
 
@@ -345,7 +363,13 @@ namespace citi_core.Services
                     BiometricEnabled = user.BiometricEnabled,
                     TwoFactorEnabled = user.SecuritySettings?.TwoFactorEnabled ?? false,
                     LastLoginAt = user.LastLoginAt,
-                    Preferences = user.UserPreferences
+                    Preferences = new UserPreferencesDto
+                    {
+                        Language = user.UserPreferences?.Language ?? "en",
+                        Currency = user.UserPreferences?.Currency ?? "USD",
+                        Theme = user.UserPreferences?.Theme ?? Theme.Light,
+                        NotificationsEnabled = user.UserPreferences?.NotificationsEnabled ?? true
+                    }
                 }
             };
 
@@ -624,6 +648,65 @@ namespace citi_core.Services
                     return Result<bool>.Failure("An error occurred while updating biometric status.");
                 }
             });
+        }
+        public async Task<Result<UserProfileDTO>> GetProfileAsync(Guid userId)
+        {
+            var user = await _unitOfWork.AuthRepository.GetUserWithPreferencesAsync(userId);
+            if (user == null)
+                return Result<UserProfileDTO>.Failure("User not found");
+
+            var profile = new UserProfileDTO
+            {
+                UserId = user.UserId,
+                Email = user.Email,
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber ?? "",
+                BiometricEnabled = user.BiometricEnabled,
+                TwoFactorEnabled = user.SecuritySettings?.TwoFactorEnabled ?? false,
+                KycStatus = user.KycStatus,
+                LastLoginAt = user.LastLoginAt,
+                Preferences = new UserPreferencesDto
+                {
+                    Language = user.UserPreferences?.Language ?? "en",
+                    Currency = user.UserPreferences?.Currency ?? "USD",
+                    Theme = user.UserPreferences?.Theme ?? Theme.Light,
+                    NotificationsEnabled = user.UserPreferences?.NotificationsEnabled ?? true
+                }
+            };
+
+            return Result<UserProfileDTO>.Success(profile);
+        }
+
+        public async Task<Result<bool>> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest request)
+        {
+            var user = await _unitOfWork.AuthRepository.GetUserWithPreferencesAsync(userId);
+            if (user == null)
+                return Result<bool>.Failure("User not found");
+
+            user.FullName = request.FullName;
+            user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber;
+
+            if (user.UserPreferences == null)
+            {
+                user.UserPreferences = new UserPreferences
+                {
+                    UserId = user.UserId,
+                    Language = request.Preferences.Language,
+                    Currency = request.Preferences.Currency,
+                    Theme = request.Preferences.Theme,
+                    NotificationsEnabled = request.Preferences.NotificationsEnabled
+                };
+            }
+            else
+            {
+                user.UserPreferences.Language = request.Preferences.Language;
+                user.UserPreferences.Currency = request.Preferences.Currency;
+                user.UserPreferences.Theme = request.Preferences.Theme;
+                user.UserPreferences.NotificationsEnabled = request.Preferences.NotificationsEnabled;
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            return Result<bool>.Success(true);
         }
     }
 }
