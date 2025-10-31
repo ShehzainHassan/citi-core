@@ -47,11 +47,10 @@ namespace citi_core.Models
 
         [Range(1, 600)]
         public int? TermMonths { get; set; }
-
         public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ClosedAt { get; set; }
-
         public ICollection<Card> Cards { get; set; } = new List<Card>();
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        public ICollection<CardRequest> CardRequests { get; set; } = new List<CardRequest>();
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using citi_core.Data;
 
@@ -11,9 +12,11 @@ using citi_core.Data;
 namespace citi_core.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251030130548_Added_CardAuditLog_Model")]
+    partial class Added_CardAuditLog_Model
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -332,68 +335,6 @@ namespace citi_core.Migrations
                     b.HasIndex("UserId", "Status");
 
                     b.ToTable("Cards");
-                });
-
-            modelBuilder.Entity("citi_core.Models.CardRequest", b =>
-                {
-                    b.Property<Guid>("CardRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CardHolderName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CardName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("CardType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal?>("DesiredCreditLimit")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("CardRequestId");
-
-                    b.HasIndex("AccountId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("CardRequests");
                 });
 
             modelBuilder.Entity("citi_core.Models.OTPVerification", b =>
@@ -888,25 +829,6 @@ namespace citi_core.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("citi_core.Models.CardRequest", b =>
-                {
-                    b.HasOne("citi_core.Models.Account", "Account")
-                        .WithMany("CardRequests")
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("citi_core.Models.User", "User")
-                        .WithMany("CardRequests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("citi_core.Models.RefreshToken", b =>
                 {
                     b.HasOne("citi_core.Models.User", "User")
@@ -959,8 +881,6 @@ namespace citi_core.Migrations
 
             modelBuilder.Entity("citi_core.Models.Account", b =>
                 {
-                    b.Navigation("CardRequests");
-
                     b.Navigation("Cards");
 
                     b.Navigation("Transactions");
@@ -980,8 +900,6 @@ namespace citi_core.Migrations
                     b.Navigation("AuthAuditLogs");
 
                     b.Navigation("CardAuditLogs");
-
-                    b.Navigation("CardRequests");
 
                     b.Navigation("Cards");
 

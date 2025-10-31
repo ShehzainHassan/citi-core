@@ -3,8 +3,9 @@
     public enum CardStatus
     {
         Active,
+        Pending,
         Blocked,
         Expired,
-        Cancelled
+        Cancelled,
     }
 }

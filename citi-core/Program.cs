@@ -1,5 +1,6 @@
 using citi_core.Data;
 using citi_core.Interfaces;
+using citi_core.Middleware;
 using citi_core.Services;
 using citi_core.Validators;
 using FluentValidation;
@@ -9,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using StackExchange.Redis;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,11 +89,17 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IOTPService, OTPService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 
 // Register Repositories
 builder.Services.AddScoped<IAuthRepository, DbAuthRepository>();
 builder.Services.AddScoped<IJWTRepository, DbJWTRepository>();
 builder.Services.AddScoped<IOTPRepository, DbOTPRepository>();
+builder.Services.AddScoped<IAccountRepository, DbAccountRepository>();
+builder.Services.AddScoped<ITransactionRepository, DbTransactionRepository>();
+builder.Services.AddScoped<ICardRepository, DbCardRepository>();
 
 // Register Health Checks
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database_health");
@@ -104,12 +113,27 @@ builder.Services.AddValidatorsFromAssemblyContaining<SignUpRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<VerifyOTPRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<ResetPasswordRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserProfileRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AddCardRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateAccountRequestValidator>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
+    options.InstanceName = "AutoFiCore_";
+});
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var config = builder.Configuration.GetConnectionString("RedisConnection");
+    return ConnectionMultiplexer.Connect(config!);
+});
 
 var app = builder.Build();
 
 app.MapHealthChecks("/health");
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 await DbInitializer.InitializeAsync(app.Services, app.Environment);
 

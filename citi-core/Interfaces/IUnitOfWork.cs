@@ -9,6 +9,8 @@ namespace citi_core.Interfaces
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
         IAuthRepository AuthRepository { get; }
+        IAccountRepository AccountRepository { get; }
+        ITransactionRepository TransactionRepository { get; }
         ApplicationDbContext DbContext { get; }
     }
 }

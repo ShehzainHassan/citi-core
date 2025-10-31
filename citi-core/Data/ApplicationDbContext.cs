@@ -19,7 +19,8 @@ namespace citi_core.Data
         public DbSet<OTPVerification> OTPVerifications { get; set; } = null!;
         public DbSet<AuthAuditLog> AuthAuditLogs { get; set; } = null!;
         public DbSet<UserSecuritySettings> UserSecuritySettings { get; set; } = null!;
-
+        public DbSet<CardAuditLog> CardAuditLogs { get; set; } = null!;
+        public DbSet<CardRequest> CardRequests { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -79,6 +80,8 @@ namespace citi_core.Data
                 entity.Property(c => c.ExpiryDate).IsRequired().HasMaxLength(5);
                 entity.Property(c => c.CreditLimit).HasColumnType("decimal(18,2)");
                 entity.Property(c => c.AvailableCredit).HasColumnType("decimal(18,2)");
+                entity.Property(c => c.DailyLimit).HasColumnType("decimal(18,2)");
+                entity.Property(c => c.MonthlyLimit).HasColumnType("decimal(18,2)");
                 entity.Property(c => c.IssuedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
@@ -122,6 +125,7 @@ namespace citi_core.Data
                 entity.Property(o => o.AttemptCount).HasDefaultValue(0);
             });
 
+            // Configure AuthAuditLog
             modelBuilder.Entity<AuthAuditLog>(entity =>
             {
                 entity.HasKey(a => a.AuthAuditLogId);
@@ -134,6 +138,7 @@ namespace citi_core.Data
                 entity.Property(a => a.ActionDate).IsRequired();
             });
 
+            // Configure UserSecuritySettings
             modelBuilder.Entity<UserSecuritySettings>(entity =>
             {
                 entity.HasKey(u => u.SecuritySettingsId);
@@ -143,6 +148,25 @@ namespace citi_core.Data
                 entity.Property(u => u.FailedLoginAttempts).HasDefaultValue(0);
             });
 
+            // Configure CardAuditLog
+            modelBuilder.Entity<CardAuditLog>(entity =>
+            {
+                entity.HasKey(e => e.CardAuditLogId);
+                entity.Property(e => e.Reason).HasMaxLength(512);
+                entity.HasOne(e => e.Card).WithMany().HasForeignKey(e => e.CardId);
+                entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
+            });
+
+            // Configure CardRequest
+            modelBuilder.Entity<CardRequest>(entity =>
+            {
+                entity.HasKey(cr => cr.CardRequestId);
+                entity.Property(cr => cr.CardHolderName).IsRequired().HasMaxLength(100);
+                entity.Property(cr => cr.CardName).IsRequired().HasMaxLength(100);
+                entity.Property(cr => cr.DesiredCreditLimit).HasColumnType("decimal(18,2)");
+                entity.Property(cr => cr.Status).IsRequired();
+                entity.Property(cr => cr.CardType).IsRequired();
+            });
 
             // Indexes
             modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
@@ -170,6 +194,10 @@ namespace citi_core.Data
             modelBuilder.Entity<AuthAuditLog>().HasIndex(a => new { a.ActionType, a.ActionDate });
 
             modelBuilder.Entity<UserSecuritySettings>().HasIndex(u => u.UserId).IsUnique();
+
+            modelBuilder.Entity<CardAuditLog>().HasIndex(log => log.CardId);
+            modelBuilder.Entity<CardAuditLog>().HasIndex(log => log.UserId);
+
 
             // Relationships
             modelBuilder.Entity<User>()
@@ -225,6 +253,31 @@ namespace citi_core.Data
                   .HasForeignKey<UserSecuritySettings>(u => u.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<CardAuditLog>()
+                .HasOne(e => e.Card)
+                .WithMany(c => c.AuditLogs)
+                .HasForeignKey(e => e.CardId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CardAuditLog>()
+                .HasOne(e => e.User)
+                .WithMany(u => u.CardAuditLogs)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CardRequest>()
+                .HasOne(cr => cr.User)
+                .WithMany(u => u.CardRequests)
+                .HasForeignKey(cr => cr.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CardRequest>()
+                .HasOne(cr => cr.Account)
+                .WithMany(a => a.CardRequests)
+                .HasForeignKey(cr => cr.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
             // Query Filters for Soft Delete
             modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
             modelBuilder.Entity<Account>().HasQueryFilter(a => !a.IsDeleted);
@@ -235,7 +288,8 @@ namespace citi_core.Data
             modelBuilder.Entity<OTPVerification>().HasQueryFilter(otp => !otp.IsDeleted);
             modelBuilder.Entity<AuthAuditLog>().HasQueryFilter(a => !a.IsDeleted);
             modelBuilder.Entity<UserSecuritySettings>().HasQueryFilter(us => !us.User.IsDeleted);
-
+            modelBuilder.Entity<CardAuditLog>().HasQueryFilter(a => !a.Card.IsDeleted);
+            modelBuilder.Entity<CardRequest>().HasQueryFilter(cr => !cr.IsDeleted);
         }
     }
 }

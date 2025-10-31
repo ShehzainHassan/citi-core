@@ -34,13 +34,14 @@ namespace citi_core.Models
         public bool EmailVerified { get; set; } = false;
         public bool PhoneVerified { get; set; } = false;
         public DateTime? LastLoginAt { get; set; }
-
+        public UserSecuritySettings SecuritySettings { get; set; } = null!;
         public UserPreferences? UserPreferences { get; set; }
         public ICollection<Account> Accounts { get; set; } = new List<Account>();
         public ICollection<Card> Cards { get; set; } = new List<Card>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<AuthAuditLog> AuthAuditLogs { get; set; } = new List<AuthAuditLog>();
-        public UserSecuritySettings SecuritySettings { get; set; } = null!;
+        public ICollection<CardAuditLog> CardAuditLogs { get; set; } = new List<CardAuditLog>();
+        public ICollection<CardRequest> CardRequests { get; set; } = new List<CardRequest>();
 
     }
 }
