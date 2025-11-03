@@ -147,6 +147,7 @@ namespace citi_core.Services
         {
             var account = await _unitOfWork.AccountRepository.GetAccountByIdAsync(accountId);
             if (account == null || account.UserId != userId)
+            {
                 return new PaginatedResponse<TransactionDto>
                 {
                     PageNumber = page,
@@ -154,24 +155,41 @@ namespace citi_core.Services
                     TotalCount = 0,
                     Items = new List<TransactionDto>()
                 };
+            }
 
             var skip = (page - 1) * pageSize;
-            var transactions = await _unitOfWork.TransactionRepository.GetStatementAsync(accountId, startDate, endDate, skip, pageSize);
-            var total = await _unitOfWork.TransactionRepository.CountStatementAsync(accountId, startDate, endDate);
+
+            var transactions = await _unitOfWork.TransactionRepository.GetStatementAsync(
+                accountId, startDate, endDate, skip, pageSize);
+
+            var total = await _unitOfWork.TransactionRepository.CountStatementAsync(
+                accountId, startDate, endDate);
+
+            var items = transactions.Select(t => new TransactionDto
+            {
+                TransactionId = t.TransactionId,
+                Reference = t.TransactionReference,
+                Type = t.TransactionType,
+                Amount = t.Amount,
+                Description = t.Description,
+                Category = t.Category != null ? new TransactionCategory
+                {
+                    TransactionCategoryId = t.Category.TransactionCategoryId,
+                    Name = t.Category.Name,
+                    Type = t.Category.Type,
+                    IsSystem = t.Category.IsSystem
+                } : null,
+                Status = t.Status,
+                TransactionDate = t.TransactionDate,
+                DateGroup = DateGroup.GetDateGroup(t.TransactionDate)
+            }).ToList();
 
             return new PaginatedResponse<TransactionDto>
             {
                 PageNumber = page,
                 PageSize = pageSize,
                 TotalCount = total,
-                Items = transactions.Select(t => new TransactionDto
-                {
-                    TransactionId = t.TransactionId,
-                    Timestamp = t.CreatedAt,
-                    Amount = t.Amount,
-                    Description = t.Description,
-                    Status = t.Status
-                }).ToList()
+                Items = items
             };
         }
         public async Task<Result<Guid>> AddAccountAsync(Guid userId, CreateAccountRequest request)

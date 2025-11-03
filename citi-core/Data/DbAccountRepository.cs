@@ -18,6 +18,13 @@ public class DbAccountRepository : IAccountRepository
             .Include(a => a.Transactions)
             .FirstOrDefaultAsync(a => a.AccountId == accountId && !a.IsDeleted);
     }
+    public async Task<Account?> GetAccountByNumberAsync(string accountNumber)
+    {
+        return await _context.Accounts
+            .Include(a => a.Cards)
+            .Include(a => a.Transactions)
+            .FirstOrDefaultAsync(a => a.AccountNumber == accountNumber && !a.IsDeleted);
+    }
     public async Task<List<Account>> GetAllAccountsByUserIdAsync(Guid userId)
     {
         return await _context.Accounts

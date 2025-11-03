@@ -11,6 +11,8 @@ namespace citi_core.Interfaces
         IAuthRepository AuthRepository { get; }
         IAccountRepository AccountRepository { get; }
         ITransactionRepository TransactionRepository { get; }
+        IBeneficiaryRepository BeneficiaryRepository { get; }
+        ICardRepository CardRepository { get; }
         ApplicationDbContext DbContext { get; }
     }
 }

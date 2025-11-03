@@ -7,10 +7,8 @@ namespace citi_core.Validators
     {
         public CardStatusUpdateRequestValidator()
         {
-            RuleFor(x => x.Status)
-                .IsInEnum();
-            RuleFor(x => x.Reason)
-                .NotEmpty().MaximumLength(512);
+            RuleFor(x => x.Status).IsInEnum();
+            RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
         }
     }
 }

@@ -10,13 +10,17 @@ namespace citi_core.Data
         public ApplicationDbContext DbContext => _context;
         public IAuthRepository AuthRepository { get; }
         public IAccountRepository AccountRepository { get; }
-        public ITransactionRepository TransactionRepository { get; }        
-        public UnitOfWork(ApplicationDbContext context, IAuthRepository authRepository, IAccountRepository accountRepository, ITransactionRepository transactionRepository)
+        public ITransactionRepository TransactionRepository { get; }   
+        public IBeneficiaryRepository BeneficiaryRepository { get; }
+        public ICardRepository CardRepository { get; }
+        public UnitOfWork(ApplicationDbContext context, IAuthRepository authRepository, IAccountRepository accountRepository, ITransactionRepository transactionRepository, IBeneficiaryRepository beneficiaryRepository, ICardRepository cardRepository)
         {
             _context = context;
             AuthRepository = authRepository;
             AccountRepository = accountRepository;
             TransactionRepository = transactionRepository;
+            BeneficiaryRepository = beneficiaryRepository;
+            CardRepository = cardRepository;
         }
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
         public async Task BeginTransactionAsync() =>

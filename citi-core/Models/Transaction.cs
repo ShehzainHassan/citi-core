@@ -11,6 +11,8 @@ namespace citi_core.Models
         public Guid TransactionId { get; set; } = Guid.NewGuid();
         public Guid? AccountId { get; set; }
         public Guid? CardId { get; set; }
+        public Guid? TransactionCategoryId { get; set; }
+        public Guid? RecurringScheduleId { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -36,6 +38,7 @@ namespace citi_core.Models
         public string? Description { get; set; }
 
         public TransactionCategory? Category { get; set; }
+        public RecurringSchedule? RecurringSchedule { get; set; }
 
         [Required]
         public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
@@ -52,6 +55,26 @@ namespace citi_core.Models
         [Required]
         public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
 
+        [MaxLength(100)]
+        public string? MerchantName { get; set; }
+
+        [MaxLength(100)]
+        public string? MerchantCategory { get; set; }
+
+        public BillTypes? BillType { get; set; }
+
+        [MaxLength(200)]
+        public string? Location { get; set; }
+
+        [MaxLength(500)]
+        public string? Notes { get; set; }
+
+        [MaxLength(300)]
+        public string? ReceiptUrl { get; set; }
+        public bool IsFlagged { get; set; } = false;
+
+        [MaxLength(300)]
+        public string? FlagReason { get; set; }
         public Account Account { get; set; } = null!;
         public Card Card { get; set; } = null!;
     }

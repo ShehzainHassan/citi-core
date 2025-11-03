@@ -18,7 +18,7 @@ namespace citi_core.Models
         public User User { get; set; } = null!;
 
         [Required]
-        [MaxLength(50)]
+        [MaxLength(25)]
         public string AccountNumber { get; set; } = null!;
 
         [Required]

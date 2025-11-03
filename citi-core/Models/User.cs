@@ -42,6 +42,7 @@ namespace citi_core.Models
         public ICollection<AuthAuditLog> AuthAuditLogs { get; set; } = new List<AuthAuditLog>();
         public ICollection<CardAuditLog> CardAuditLogs { get; set; } = new List<CardAuditLog>();
         public ICollection<CardRequest> CardRequests { get; set; } = new List<CardRequest>();
-
+        public ICollection<Beneficiary> Beneficiaries { get; set; } = new List<Beneficiary>();
+        public ICollection<RecurringSchedule> RecurringSchedules { get; set; } = new List<RecurringSchedule>();
     }
 }

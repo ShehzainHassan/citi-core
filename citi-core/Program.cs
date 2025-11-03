@@ -92,6 +92,10 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IBeneficiaryService, BeneficiaryService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<ICsvService, CsvService>();
 
 // Register Repositories
 builder.Services.AddScoped<IAuthRepository, DbAuthRepository>();
@@ -100,6 +104,7 @@ builder.Services.AddScoped<IOTPRepository, DbOTPRepository>();
 builder.Services.AddScoped<IAccountRepository, DbAccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, DbTransactionRepository>();
 builder.Services.AddScoped<ICardRepository, DbCardRepository>();
+builder.Services.AddScoped<IBeneficiaryRepository, DbBeneficiaryRepository>();
 
 // Register Health Checks
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database_health");
@@ -114,7 +119,16 @@ builder.Services.AddValidatorsFromAssemblyContaining<VerifyOTPRequestValidator>(
 builder.Services.AddValidatorsFromAssemblyContaining<ResetPasswordRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserProfileRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<AddCardRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CardStatusUpdateRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateCardRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateAccountRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<TransferRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UserPreferencesDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<BillPaymentRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<DepositRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AddBeneficiaryRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateBeneficiaryRequestValidator>();
+
 
 builder.Services.AddMemoryCache();
 builder.Services.AddStackExchangeRedisCache(options =>

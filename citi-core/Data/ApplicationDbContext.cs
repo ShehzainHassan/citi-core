@@ -21,6 +21,11 @@ namespace citi_core.Data
         public DbSet<UserSecuritySettings> UserSecuritySettings { get; set; } = null!;
         public DbSet<CardAuditLog> CardAuditLogs { get; set; } = null!;
         public DbSet<CardRequest> CardRequests { get; set; } = null!;
+        public DbSet<Beneficiary> Beneficiaries { get; set; } = null!;
+        public DbSet<RecurringSchedule> RecurringSchedules { get; set; } = null!;
+        public DbSet<TransactionCategory> TransactionCategories { get; set; } = null!;
+        public DbSet<TransactionAuditLog> TransactionAuditLogs { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -59,7 +64,7 @@ namespace citi_core.Data
             modelBuilder.Entity<Account>(entity =>
             {
                 entity.HasKey(a => a.AccountId);
-                entity.Property(a => a.AccountNumber).IsRequired().HasMaxLength(50);
+                entity.Property(a => a.AccountNumber).IsRequired().HasMaxLength(25);
                 entity.Property(a => a.Currency).IsRequired().HasMaxLength(10);
                 entity.Property(a => a.Branch).IsRequired().HasMaxLength(100);
                 entity.Property(a => a.Balance).HasColumnType("decimal(18,2)");
@@ -101,6 +106,13 @@ namespace citi_core.Data
                 entity.Property(t => t.BeneficiaryName).HasMaxLength(100);
                 entity.Property(t => t.TransactionDate).IsRequired();
                 entity.Property(t => t.Status).IsRequired();
+                entity.Property(t => t.MerchantName).HasMaxLength(100);
+                entity.Property(t => t.MerchantCategory).HasMaxLength(100);
+                entity.Property(t => t.Location).HasMaxLength(200);
+                entity.Property(t => t.Notes).HasMaxLength(500);
+                entity.Property(t => t.ReceiptUrl).HasMaxLength(300);
+                entity.Property(t => t.IsFlagged).IsRequired();
+                entity.Property(t => t.FlagReason).HasMaxLength(300);
             });
 
             // Configure RefreshToken
@@ -148,6 +160,15 @@ namespace citi_core.Data
                 entity.Property(u => u.FailedLoginAttempts).HasDefaultValue(0);
             });
 
+            modelBuilder.Entity<TransactionAuditLog>(entity =>
+            {
+                entity.HasKey(e => e.AuditLogId);
+                entity.Property(e => e.AuditLogId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.Action).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Reference).IsRequired().HasMaxLength(100);
+            });
+
             // Configure CardAuditLog
             modelBuilder.Entity<CardAuditLog>(entity =>
             {
@@ -167,6 +188,30 @@ namespace citi_core.Data
                 entity.Property(cr => cr.Status).IsRequired();
                 entity.Property(cr => cr.CardType).IsRequired();
             });
+
+            // Configure Beneficiary
+            modelBuilder.Entity<Beneficiary>(entity =>
+            {
+                entity.HasKey(b => b.BeneficiaryId);
+                entity.Property(b => b.BeneficiaryName).IsRequired().HasMaxLength(100);
+                entity.Property(b => b.AccountNumber).IsRequired().HasMaxLength(20);
+                entity.Property(b => b.BankName).IsRequired().HasMaxLength(100);
+                entity.Property(b => b.BankCode).IsRequired().HasMaxLength(20);
+                entity.Property(b => b.PhoneNumber).HasMaxLength(20);
+                entity.Property(b => b.Email).HasMaxLength(100);
+                entity.Property(b => b.Nickname).HasMaxLength(50);
+                entity.Property(b => b.IsFavorite).IsRequired();   
+            });
+
+            // Configure Recurring Schedule
+            modelBuilder.Entity<RecurringSchedule>().HasKey(rs => rs.RecurringScheduleId);
+            modelBuilder.Entity<RecurringSchedule>().Property(rs => rs.Amount).HasColumnType("decimal(18,2)");
+
+            // Transaction Category
+            modelBuilder.Entity<TransactionCategory>().HasKey(tc => tc.TransactionCategoryId);
+
+            modelBuilder.Entity<TransactionCategory>().HasIndex(tc => new { tc.Type, tc.Name }).HasDatabaseName("IX_Type_Name");
+
 
             // Indexes
             modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
@@ -198,6 +243,14 @@ namespace citi_core.Data
             modelBuilder.Entity<CardAuditLog>().HasIndex(log => log.CardId);
             modelBuilder.Entity<CardAuditLog>().HasIndex(log => log.UserId);
 
+            modelBuilder.Entity<Beneficiary>().HasIndex(b => new { b.UserId, b.AccountNumber }).HasDatabaseName("IX_User_AccountNumber");
+
+            modelBuilder.Entity<RecurringSchedule>().HasIndex(rs => new { rs.UserId, rs.NextExecutionDate }).HasDatabaseName("IX_User_NextExecution");
+
+            modelBuilder.Entity<TransactionCategory>().HasIndex(tc => new { tc.Type, tc.Name }).HasDatabaseName("IX_Type_Name");
+
+            modelBuilder.Entity<TransactionAuditLog>().HasIndex(e => e.UserId);
+            modelBuilder.Entity<TransactionAuditLog>().HasIndex(e => e.Reference);
 
             // Relationships
             modelBuilder.Entity<User>()
@@ -277,6 +330,23 @@ namespace citi_core.Data
                 .HasForeignKey(cr => cr.AccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Beneficiary>()
+                .HasOne(b => b.User)
+                .WithMany(u => u.Beneficiaries)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RecurringSchedule>()
+                .HasOne(rs => rs.User)
+                .WithMany(u => u.RecurringSchedules)
+                .HasForeignKey(rs => rs.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.Category)
+                .WithMany(tc => tc.Transactions)
+                .HasForeignKey(t => t.TransactionCategoryId)
+                .OnDelete(DeleteBehavior.SetNull); 
 
             // Query Filters for Soft Delete
             modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
@@ -289,7 +359,11 @@ namespace citi_core.Data
             modelBuilder.Entity<AuthAuditLog>().HasQueryFilter(a => !a.IsDeleted);
             modelBuilder.Entity<UserSecuritySettings>().HasQueryFilter(us => !us.User.IsDeleted);
             modelBuilder.Entity<CardAuditLog>().HasQueryFilter(a => !a.Card.IsDeleted);
-            modelBuilder.Entity<CardRequest>().HasQueryFilter(cr => !cr.IsDeleted);
+            modelBuilder.Entity<CardRequest>().HasQueryFilter(cr => !cr.IsDeleted && !cr.Account.IsDeleted && !cr.User.IsDeleted); modelBuilder.Entity<Beneficiary>().HasQueryFilter(b => !b.IsDeleted);
+            modelBuilder.Entity<RecurringSchedule>().HasQueryFilter(r => !r.IsDeleted);
+            modelBuilder.Entity<TransactionCategory>().HasQueryFilter(t => !t.IsDeleted);
+            modelBuilder.Entity<TransactionAuditLog>().HasQueryFilter(t => !t.IsDeleted);
+
         }
     }
 }
